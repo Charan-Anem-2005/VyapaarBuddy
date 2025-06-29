@@ -1,11 +1,20 @@
 import { useEffect, useState } from "react";
-import API from "./Api";
 import { toast } from "react-toastify";
+import API from "./Api";
+import {
+  Building2,
+  ImageIcon,
+  Palette,
+  TableProperties,
+  Save,
+  ArrowLeft,
+  Settings,
+} from "lucide-react";
 
 export default function InvoiceSettings() {
   const [form, setForm] = useState({
-    colorPrimary: "#007BFF",
-    colorSecondary: "#E9F5FF",
+    colorPrimary: "#1E1E2D",
+    colorSecondary: "#fabd05",
     visibleFields: [
       "qty",
       "packets",
@@ -26,7 +35,6 @@ export default function InvoiceSettings() {
 
   const [logoFile, setLogoFile] = useState(null);
 
-  // Fetch saved settings on mount
   useEffect(() => {
     async function loadSettings() {
       try {
@@ -58,19 +66,14 @@ export default function InvoiceSettings() {
   const handleSave = async () => {
     try {
       let logoUrl = form.logoUrl;
-
       if (logoFile) {
         const data = new FormData();
         data.append("logo", logoFile);
-        const res = await API.post("/logo/upload", data); // assumes logo upload route
+        const res = await API.post("/logo/upload", data);
         logoUrl = res.data.url;
       }
 
-      const payload = {
-        ...form,
-        logoUrl,
-      };
-
+      const payload = { ...form, logoUrl };
       await API.post("/invoice-settings", payload);
       toast.success("Settings saved!");
     } catch (err) {
@@ -80,132 +83,168 @@ export default function InvoiceSettings() {
   };
 
   return (
-    <div className="p-6 max-w-3xl mx-auto bg-white rounded shadow text-[#1E1E2D]">
-      <h2 className="text-2xl font-bold mb-4">Invoice Settings</h2>
+    <div className="max-w-5xl mx-auto p-8">
+      {/* Header */}
+
+      <div className="flex items-center gap-2 text-[#1E1E2D] font-semibold text-2xl pb-6">
+        <Settings size={24} stroke="#fabd05" />
+        <span>Invoice Settings</span>
+      </div>
+
+      {/* Company Details */}
+      <div className="bg-white rounded-lg p-6 shadow mb-6">
+        <div className="flex items-center gap-2 mb-4 text-[#1E1E2D] font-bold text-lg">
+          <Building2 size={20} stroke="#fabd05" />
+          Company Details
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <input
+            placeholder="Company Name"
+            value={form.companyName}
+            onChange={(e) =>
+              setForm((prev) => ({ ...prev, companyName: e.target.value }))
+            }
+            className="border rounded p-2"
+          />
+          <input
+            placeholder="Email"
+            type="email"
+            value={form.email}
+            onChange={(e) =>
+              setForm((prev) => ({ ...prev, email: e.target.value }))
+            }
+            className="border rounded p-2"
+          />
+          <input
+            placeholder="Phone Number"
+            value={form.phone}
+            onChange={(e) =>
+              setForm((prev) => ({ ...prev, phone: e.target.value }))
+            }
+            className="border rounded p-2"
+          />
+          <input
+            placeholder="GST Number"
+            value={form.gstin}
+            onChange={(e) =>
+              setForm((prev) => ({ ...prev, gstin: e.target.value }))
+            }
+            className="border rounded p-2"
+          />
+          <textarea
+            placeholder="Address"
+            value={form.address}
+            onChange={(e) =>
+              setForm((prev) => ({ ...prev, address: e.target.value }))
+            }
+            className="border rounded p-2 col-span-2"
+          />
+        </div>
+      </div>
 
       {/* Logo Upload */}
-      <div className="mb-4">
-        <label className="font-semibold block">Company Logo</label>
-        <input type="file" onChange={(e) => setLogoFile(e.target.files[0])} />
-        {form.logoUrl && (
-          <img src={form.logoUrl} alt="Logo" className="h-16 mt-2" />
-        )}
-      </div>
-
-      {/* Color Picker */}
-      <div className="mb-4 flex gap-4">
-        <div>
-          <label className="block font-semibold">Primary Color</label>
-          <input
-            type="color"
-            value={form.colorPrimary}
-            onChange={(e) =>
-              setForm((prev) => ({ ...prev, colorPrimary: e.target.value }))
-            }
-          />
+      <div className="bg-white rounded-lg p-6 shadow mb-6">
+        <div className="flex items-center gap-2 mb-4 text-[#1E1E2D] font-bold text-lg">
+          <ImageIcon size={20} stroke="#fabd05" />
+          Company Logo
         </div>
-        <div>
-          <label className="block font-semibold">Secondary Color</label>
+        <div className="flex items-center gap-4">
           <input
-            type="color"
-            value={form.colorSecondary}
-            onChange={(e) =>
-              setForm((prev) => ({ ...prev, colorSecondary: e.target.value }))
-            }
+            type="file"
+            onChange={(e) => setLogoFile(e.target.files[0])}
+            className="block"
           />
-        </div>
-      </div>
-
-      {/* Visible Fields */}
-      <div className="mb-4">
-        <label className="block font-semibold">Visible Table Columns</label>
-        <div className="grid grid-cols-2 gap-2 mt-2">
-          {["qty", "packets", "lengths", "rate", "CGST", "SGST", "total"].map(
-            (key) => (
-              <label key={key}>
-                <input
-                  type="checkbox"
-                  checked={form.visibleFields.includes(key)}
-                  onChange={() => toggleField(key)}
-                />{" "}
-                {key}
-              </label>
-            )
+          {form.logoUrl && (
+            <img
+              src={form.logoUrl}
+              alt="Logo"
+              className="h-16 w-auto border rounded"
+            />
           )}
         </div>
       </div>
 
-      {/* Vehicle Field */}
-      <div className="mb-4">
-        <label className="block font-semibold">Show Vehicle Number</label>
-        <input
-          type="checkbox"
-          checked={form.vehicleField}
-          onChange={(e) =>
-            setForm((prev) => ({ ...prev, vehicleField: e.target.checked }))
-          }
-        />
+      {/* Brand Colors */}
+      <div className="bg-white rounded-lg p-6 shadow mb-6">
+        <div className="flex items-center gap-2 mb-4 text-[#1E1E2D] font-bold text-lg">
+          <Palette size={20} stroke="#fabd05" />
+          Brand Colors
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Primary Color
+            </label>
+            <input
+              type="color"
+              value={form.colorPrimary}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, colorPrimary: e.target.value }))
+              }
+              className="w-12 h-10 cursor-pointer"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Secondary Color
+            </label>
+            <input
+              type="color"
+              value={form.colorSecondary}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, colorSecondary: e.target.value }))
+              }
+              className="w-12 h-10 cursor-pointer"
+            />
+          </div>
+        </div>
       </div>
 
-      {/* Company Details */}
-      <div className="mb-4">
-        <label className="font-semibold block mb-1">Company Name</label>
-        <input
-          type="text"
-          value={form.companyName}
-          onChange={(e) =>
-            setForm((prev) => ({ ...prev, companyName: e.target.value }))
-          }
-          className="w-full border rounded p-2"
-        />
-
-        <label className="font-semibold block mt-3 mb-1">GSTIN</label>
-        <input
-          type="text"
-          value={form.gstin}
-          onChange={(e) =>
-            setForm((prev) => ({ ...prev, gstin: e.target.value }))
-          }
-          className="w-full border rounded p-2"
-        />
-
-        <label className="font-semibold block mt-3 mb-1">Address</label>
-        <textarea
-          value={form.address}
-          onChange={(e) =>
-            setForm((prev) => ({ ...prev, address: e.target.value }))
-          }
-          className="w-full border rounded p-2"
-        />
-
-        <label className="font-semibold block mt-3 mb-1">Phone</label>
-        <input
-          type="text"
-          value={form.phone}
-          onChange={(e) =>
-            setForm((prev) => ({ ...prev, phone: e.target.value }))
-          }
-          className="w-full border rounded p-2"
-        />
-
-        <label className="font-semibold block mt-3 mb-1">Email</label>
-        <input
-          type="email"
-          value={form.email}
-          onChange={(e) =>
-            setForm((prev) => ({ ...prev, email: e.target.value }))
-          }
-          className="w-full border rounded p-2"
-        />
+      {/* Invoice Columns */}
+      <div className="bg-white rounded-lg p-6 shadow">
+        <div className="flex items-center gap-2 mb-4 text-[#1E1E2D] font-bold text-lg">
+          <TableProperties size={20} stroke="#fabd05" />
+          Invoice Columns
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {["qty", "packets", "lengths", "rate", "CGST", "SGST", "total"].map(
+            (key) => (
+              <label key={key} className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={form.visibleFields.includes(key)}
+                  onChange={() => toggleField(key)}
+                  className="accent-[#fabd05] scale-150 cursor-pointer"
+                />
+                <span className="capitalize text-[#1E1E2D]">{key}</span>
+              </label>
+            )
+          )}
+        </div>
+        <div className="mt-4">
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={form.vehicleField}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, vehicleField: e.target.checked }))
+              }
+              className="accent-[#fabd05] scale-150 cursor-pointer"
+            />
+            <span className="text-[#1E1E2D]">Show Vehicle Number</span>
+          </label>
+        </div>
       </div>
-
       {/* Save Button */}
-      <button
-        onClick={handleSave}
-        className="bg-[#1E1E2D] text-white px-4 py-2 rounded hover:bg-[#2b2b53]"
-      >
-        Save Settings
-      </button>
+      <div className="text-right mt-8">
+        <button
+          onClick={handleSave}
+          className="flex items-center gap-2 bg-[#1E1E2D] text-white px-6 py-2 rounded hover:bg-[#2c2c45] transition"
+        >
+          <Save size={16} stroke="#fabd05" />
+          Save Settings
+        </button>
+      </div>
     </div>
   );
 }

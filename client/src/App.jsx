@@ -20,13 +20,13 @@ import InvoiceSettings from "./pages/InvoiceSettings";
 
 function DashboardLayout() {
   return (
-    <div className="h-screen overflow-hidden flex flex-col">
-      <div className="flex flex-1">
-        <Sidebar />
-        <main className="ml-64 w-full max-h-[calc(100vh)] overflow-y-auto p-6 bg-gray-100">
-          <Outlet />
-        </main>
-      </div>
+    <div className="flex h-[calc(100vh-110px)]">
+      {" "}
+      {/* assuming navbar is 64px tall */}
+      <Sidebar />
+      <main className="ml-64 w-full overflow-y-auto p-6 bg-gray-100">
+        <Outlet />
+      </main>
     </div>
   );
 }
