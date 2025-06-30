@@ -46,8 +46,12 @@ router.post('/', authMiddleware, async (req, res) => {
       },
       { upsert: true, new: true }
     );
+if (updated) {
+  res.status(200).json({ message: "Settings saved", data: updated });
+} else {
+  res.status(500).json({ error: "Failed to save settings" });
+}
 
-    res.json(updated);
   } catch (err) {
     console.error('Save settings error:', err);
     res.status(500).json({ error: 'Failed to save settings' });

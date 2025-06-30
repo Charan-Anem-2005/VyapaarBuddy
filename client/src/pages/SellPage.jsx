@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { MinusCircle, UserRoundCheck, FileText } from "lucide-react";
+import { MinusCircle, UserRoundCheck } from "lucide-react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import API from "./Api";
 
 const SellPage = () => {
   const [items, setItems] = useState([
-    { PROFILE: "", PACKS: "", LENGTHS: "", QTY: "", WEIGHT: "" },
+    { PROFILE: "", PACKS: "", LENGTHS: "", QTY: "", errors: {} },
   ]);
   const [buyerInfo, setBuyerInfo] = useState({
     companyName: "",
@@ -20,16 +20,10 @@ const SellPage = () => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleChange = (index, e) => {
-    const updated = [...items];
-    updated[index][e.target.name] = e.target.value;
-    setItems(updated);
-  };
-
   const addRow = () =>
     setItems([
       ...items,
-      { PROFILE: "", PACKS: "", LENGTHS: "", QTY: "", WEIGHT: "" },
+      { PROFILE: "", PACKS: "", LENGTHS: "", QTY: "", errors: {} },
     ]);
 
   const removeRow = (index) => {
@@ -37,13 +31,99 @@ const SellPage = () => {
     setItems(updated);
   };
 
-  const confirmSell = () => setShowConfirm(true);
+  const handleChange = (index, e) => {
+    const { name, value } = e.target;
+    const updated = [...items];
+    updated[index][name] = value;
+    updated[index].errors[name] = false;
+
+    if (["PACKS", "LENGTHS", "QTY"].includes(name) && value !== "") {
+      ["PACKS", "LENGTHS", "QTY"].forEach((field) => {
+        if (field !== name) updated[index][field] = "";
+      });
+    }
+
+    setItems(updated);
+  };
+
+  const isFieldDisabled = (item, currentField) => {
+    const filled = ["PACKS", "LENGTHS", "QTY"].find(
+      (field) => item[field] !== "" && field !== currentField
+    );
+    return filled !== undefined;
+  };
+
+  const validateBuyerInfo = () => {
+    const requiredFields = {
+      companyName: "Buyer Name",
+      address: "Address",
+      phone: "Phone Number",
+    };
+
+    let isValid = true;
+
+    for (const key in requiredFields) {
+      if (!buyerInfo[key]?.trim()) {
+        toast.error(`${requiredFields[key]} is required`);
+        isValid = false;
+      }
+    }
+
+    return isValid;
+  };
+
+  const validateItems = () => {
+    const updated = [...items];
+    let isValid = true;
+
+    for (let i = 0; i < updated.length; i++) {
+      const item = updated[i];
+      const errors = {};
+
+      if (!item.PROFILE.trim()) {
+        errors.PROFILE = true;
+        toast.error(`PROFILE is required`);
+        isValid = false;
+        break;
+      }
+
+      if (!item.PACKS.trim() && !item.LENGTHS.trim() && !item.QTY.trim()) {
+        errors.PACKS = errors.LENGTHS = errors.QTY = true;
+        toast.error(`Enter either PACKS, LENGTHS, or QTY`);
+        isValid = false;
+        break;
+      }
+
+      ["PACKS", "LENGTHS", "QTY"].forEach((field) => {
+        if (item[field].trim() !== "" && isNaN(Number(item[field]))) {
+          errors[field] = true;
+          toast.error(`${field} must be a number`);
+          isValid = false;
+        }
+      });
+
+      updated[i].errors = errors;
+    }
+
+    setItems(updated);
+    return isValid;
+  };
+
+  const confirmSell = () => {
+    const isItemsValid = validateItems();
+    const isBuyerValid = validateBuyerInfo();
+
+    if (isItemsValid && isBuyerValid) {
+      setShowConfirm(true);
+    }
+  };
 
   const handleSubmit = async () => {
     setLoading(true);
     try {
+      const payload = items.map(({ errors, ...rest }) => rest);
       const res = await API.post(`/sell`, {
-        items,
+        items: payload,
         buyerInfo,
       });
       toast.success("Sell successful");
@@ -58,32 +138,30 @@ const SellPage = () => {
     }
   };
 
-  const handleDownloadInvoice = async () => {
-    try {
-      const res = await API.post(
-        `/invoice/generate`,
-        { items: soldItems, buyer: buyerInfo },
-        { responseType: "blob" }
-      );
-
-      const blob = new Blob([res.data], { type: "application/pdf" });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "invoice.pdf";
-      link.click();
-    } catch (error) {
-      console.error("Invoice generation failed:", error);
-      toast.error("Invoice generation failed");
-    }
-  };
-
   return (
     <div className="p-6 text-[#1E1E2D]">
       <ToastContainer position="top-right" autoClose={3000} />
-      <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+      <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
         <MinusCircle className="text-[#fabd05]" /> Sell Materials (Multiple)
       </h2>
+
+      <div className="bg-yellow-100 text-[#1E1E2D] border-l-4 border-[#fabd05] p-4 rounded mb-6 text-sm">
+        <p>📌 Please ensure:</p>
+        <ul className="list-disc pl-6">
+          <li>
+            The <strong>PROFILE</strong> must exactly match one from your
+            inventory.
+          </li>
+          <li>
+            You can enter only <strong>one of PACKS, LENGTHS, or QTY</strong>{" "}
+            per item.
+          </li>
+          <li>
+            Entered value must be a number. Clearing the value will re-enable
+            all fields.
+          </li>
+        </ul>
+      </div>
 
       {/* Buyer Info */}
       <div className="mb-6 bg-white border-l-4 border-[#fabd05] rounded-lg p-4 shadow-sm">
@@ -114,22 +192,25 @@ const SellPage = () => {
         </div>
       </div>
 
-      {/* Item Fields */}
+      {/* Items Section */}
       <div className="space-y-4">
         {items.map((item, index) => (
           <div
             key={index}
             className="border border-gray-300 p-4 rounded shadow-sm bg-white"
           >
-            <div className="flex flex-wrap gap-2">
-              {["PROFILE", "PACKS", "LENGTHS", "QTY", "WEIGHT"].map((field) => (
+            <div className="flex flex-wrap gap-2 items-center">
+              {["PROFILE", "PACKS", "LENGTHS", "QTY"].map((field) => (
                 <input
                   key={field}
                   name={field}
                   placeholder={field}
                   value={item[field]}
                   onChange={(e) => handleChange(index, e)}
-                  className="border px-3 py-2 rounded w-32"
+                  className={`border px-3 py-2 rounded w-32 ${
+                    item.errors?.[field] ? "border-red-500" : ""
+                  }`}
+                  disabled={field !== "PROFILE" && isFieldDisabled(item, field)}
                 />
               ))}
               {items.length > 1 && (
@@ -164,18 +245,9 @@ const SellPage = () => {
 
       {/* Totals */}
       {totalAmount > 0 && (
-        <>
-          <p className="font-semibold text-green-700 mt-4">
-            Total Amount: ₹{totalAmount.toFixed(2)}
-          </p>
-          <button
-            onClick={handleDownloadInvoice}
-            className="mt-3 bg-[#1E1E2D] text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-[#2b2b53]"
-          >
-            <FileText className="text-[#fabd05]" size={18} />
-            Download Invoice
-          </button>
-        </>
+        <p className="font-semibold text-green-700 mt-4">
+          Total Amount: ₹{totalAmount.toFixed(2)}
+        </p>
       )}
 
       {/* Confirmation Modal */}

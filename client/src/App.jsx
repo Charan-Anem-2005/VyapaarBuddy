@@ -62,7 +62,7 @@ function AppWrapper() {
           <Route path="item-manager" element={<ItemManagerPage />} />
         </Route>
       </Routes>
-      <ToastContainer position="top-right" autoClose={3000} />
+      <ToastContainer position="top-right" z-index="20" autoClose={3000} />
     </>
   );
 }

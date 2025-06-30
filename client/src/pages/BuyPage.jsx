@@ -6,7 +6,7 @@ import API from "./Api";
 
 const BuyPage = () => {
   const [items, setItems] = useState([
-    { PROFILE: "", PACKS: "", LENGTHS: "", QTY: "", WEIGHT: "" },
+    { PROFILE: "", PACKS: "", LENGTHS: "", QTY: "" },
   ]);
   const [buyerInfo, setBuyerInfo] = useState({
     companyName: "",
@@ -19,23 +19,74 @@ const BuyPage = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (index, e) => {
+    const { name, value } = e.target;
     const updated = [...items];
-    updated[index][e.target.name] = e.target.value;
+    updated[index][name] = value;
+
+    if (["PACKS", "LENGTHS", "QTY"].includes(name) && value !== "") {
+      ["PACKS", "LENGTHS", "QTY"].forEach((key) => {
+        if (key !== name) updated[index][key] = "";
+      });
+    }
+
     setItems(updated);
   };
 
   const addRow = () =>
-    setItems([
-      ...items,
-      { PROFILE: "", PACKS: "", LENGTHS: "", QTY: "", WEIGHT: "" },
-    ]);
+    setItems([...items, { PROFILE: "", PACKS: "", LENGTHS: "", QTY: "" }]);
 
   const removeRow = (index) => {
     const updated = items.filter((_, i) => i !== index);
     setItems(updated);
   };
 
-  const confirmBuy = () => setShowConfirm(true);
+  const isNumeric = (val) => /^(\d+(\.\d{1,2})?)?$/.test(val);
+
+  const validateBuyerInfo = () => {
+    const requiredFields = {
+      companyName: "Vendor Company Name",
+      address: "Vendor Address",
+      phone: "Phone Number",
+    };
+
+    let isValid = true;
+
+    for (const key in requiredFields) {
+      if (!buyerInfo[key]?.trim()) {
+        toast.error(`${requiredFields[key]} is required`);
+        isValid = false;
+      }
+    }
+
+    return isValid;
+  };
+
+  const confirmBuy = () => {
+    for (let i = 0; i < items.length; i++) {
+      const { PROFILE, PACKS, LENGTHS, QTY } = items[i];
+      const filledFields = [PACKS, LENGTHS, QTY].filter(Boolean);
+
+      if (!PROFILE.trim()) {
+        toast.error(`PROFILE is required`);
+        return;
+      }
+
+      if (filledFields.length === 0) {
+        toast.error(`Enter either PACKS, LENGTHS, or QTY`);
+        return;
+      }
+
+      const value = filledFields[0];
+      if (!isNumeric(value)) {
+        toast.error(`Only numbers allowed in PACKS/LENGTHS/QTY`);
+        return;
+      }
+    }
+
+    if (!validateBuyerInfo()) return;
+
+    setShowConfirm(true);
+  };
 
   const handleSubmit = async () => {
     setIsLoading(true);
@@ -43,7 +94,7 @@ const BuyPage = () => {
       const res = await API.post(`/buy`, { items, buyerInfo });
       toast.success("Buy successful");
       setTotalAmount(res.data.totalAmount || 0);
-      setItems([{ PROFILE: "", PACKS: "", LENGTHS: "", QTY: "", WEIGHT: "" }]);
+      setItems([{ PROFILE: "", PACKS: "", LENGTHS: "", QTY: "" }]);
     } catch (err) {
       console.error(err);
       toast.error("Error during buy operation");
@@ -59,6 +110,24 @@ const BuyPage = () => {
         <PlusCircle className="text-[#fabd05]" /> Buy Materials (Multiple)
       </h2>
 
+      <div className="bg-yellow-100 text-[#1E1E2D] border-l-4 border-[#fabd05] p-4 rounded mb-6 text-sm">
+        <p>📌 Please ensure:</p>
+        <ul className="list-disc pl-6">
+          <li>
+            The <strong>PROFILE</strong> must exactly match one from your
+            inventory.
+          </li>
+          <li>
+            You can enter only <strong>one of PACKS, LENGTHS, or QTY</strong>{" "}
+            per item.
+          </li>
+          <li>
+            Entered value must be a number. Clearing the value will re-enable
+            all fields.
+          </li>
+        </ul>
+      </div>
+
       {/* Buyer Info */}
       <div className="mb-6 bg-white border-l-4 border-[#fabd05] rounded-lg p-4 shadow-sm">
         <h3 className="text-md font-semibold mb-4 flex items-center gap-2">
@@ -66,70 +135,52 @@ const BuyPage = () => {
           Vendor / Customer Details
         </h3>
         <div className="space-y-3">
-          <input
-            type="text"
-            placeholder="Vendor Company Name"
-            value={buyerInfo.companyName}
-            onChange={(e) =>
-              setBuyerInfo({ ...buyerInfo, companyName: e.target.value })
-            }
-            className="w-full border px-3 py-2 rounded"
-          />
-          <input
-            type="text"
-            placeholder="Vendor Address"
-            value={buyerInfo.address}
-            onChange={(e) =>
-              setBuyerInfo({ ...buyerInfo, address: e.target.value })
-            }
-            className="w-full border px-3 py-2 rounded"
-          />
-          <input
-            type="text"
-            placeholder="GSTIN"
-            value={buyerInfo.gstin}
-            onChange={(e) =>
-              setBuyerInfo({ ...buyerInfo, gstin: e.target.value })
-            }
-            className="w-full border px-3 py-2 rounded"
-          />
-          <input
-            type="text"
-            placeholder="Phone Number"
-            value={buyerInfo.phone}
-            onChange={(e) =>
-              setBuyerInfo({ ...buyerInfo, phone: e.target.value })
-            }
-            className="w-full border px-3 py-2 rounded"
-          />
+          {["companyName", "address", "gstin", "phone"].map((field) => (
+            <input
+              key={field}
+              type="text"
+              placeholder={field.replace(/([A-Z])/g, " $1")}
+              value={buyerInfo[field]}
+              onChange={(e) =>
+                setBuyerInfo({ ...buyerInfo, [field]: e.target.value })
+              }
+              className="w-full border px-3 py-2 rounded"
+            />
+          ))}
         </div>
       </div>
 
       {/* Item Rows */}
       <div className="space-y-4">
-        {items.length === 0 ? (
-          <div className="text-center text-gray-500">
-            No items available. Please add at least one row.
-          </div>
-        ) : (
-          items.map((item, index) => (
+        {items.map((item, index) => {
+          const filledField = ["PACKS", "LENGTHS", "QTY"].find(
+            (key) => item[key] !== ""
+          );
+
+          return (
             <div
               key={index}
               className="border border-gray-300 p-4 rounded shadow-sm bg-white"
             >
               <div className="flex flex-wrap gap-2">
-                {["PROFILE", "PACKS", "LENGTHS", "QTY", "WEIGHT"].map(
-                  (field) => (
-                    <input
-                      key={field}
-                      name={field}
-                      placeholder={field}
-                      value={item[field]}
-                      onChange={(e) => handleChange(index, e)}
-                      className="border px-3 py-2 rounded w-32"
-                    />
-                  )
-                )}
+                <input
+                  name="PROFILE"
+                  placeholder="PROFILE"
+                  value={item.PROFILE}
+                  onChange={(e) => handleChange(index, e)}
+                  className="border px-3 py-2 rounded w-32"
+                />
+                {["PACKS", "LENGTHS", "QTY"].map((field) => (
+                  <input
+                    key={field}
+                    name={field}
+                    placeholder={field}
+                    value={item[field]}
+                    onChange={(e) => handleChange(index, e)}
+                    className="border px-3 py-2 rounded w-32"
+                    disabled={filledField && filledField !== field}
+                  />
+                ))}
                 {items.length > 1 && (
                   <button
                     onClick={() => removeRow(index)}
@@ -140,11 +191,11 @@ const BuyPage = () => {
                 )}
               </div>
             </div>
-          ))
-        )}
+          );
+        })}
       </div>
 
-      {/* Action Buttons */}
+      {/* Buttons */}
       <div className="mt-6 flex gap-4">
         <button
           onClick={addRow}

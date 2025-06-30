@@ -7,7 +7,6 @@ import {
   Palette,
   TableProperties,
   Save,
-  ArrowLeft,
   Settings,
 } from "lucide-react";
 
@@ -65,19 +64,36 @@ export default function InvoiceSettings() {
 
   const handleSave = async () => {
     try {
+      console.log("Clicked save");
+
       let logoUrl = form.logoUrl;
+
       if (logoFile) {
         const data = new FormData();
         data.append("logo", logoFile);
         const res = await API.post("/logo/upload", data);
+        console.log("Upload res:", res.data);
         logoUrl = res.data.url;
+
+        // ✅ Update form with new logo to reflect instantly
+        setForm((prev) => ({
+          ...prev,
+          logoUrl,
+        }));
       }
 
       const payload = { ...form, logoUrl };
-      await API.post("/invoice-settings", payload);
-      toast.success("Settings saved!");
+
+      const res = await API.post("/invoice-settings", payload);
+      console.log("Settings saved response:", res.data);
+
+      toast.dismiss();
+      toast.success("Settings saved!", { autoClose: 3000 });
+
+      // ✅ Clear file input
+      setLogoFile(null);
     } catch (err) {
-      console.error(err);
+      console.error("Error in save:", err);
       toast.error("Failed to save settings.");
     }
   };
@@ -85,7 +101,6 @@ export default function InvoiceSettings() {
   return (
     <div className="max-w-5xl mx-auto p-8">
       {/* Header */}
-
       <div className="flex items-center gap-2 text-[#1E1E2D] font-semibold text-2xl pb-6">
         <Settings size={24} stroke="#fabd05" />
         <span>Invoice Settings</span>
@@ -156,7 +171,13 @@ export default function InvoiceSettings() {
           />
           {form.logoUrl && (
             <img
-              src={form.logoUrl}
+              src={
+                form.logoUrl.startsWith("http")
+                  ? form.logoUrl
+                  : `${import.meta.env.VITE_BASE_URL}${
+                      form.logoUrl
+                    }?t=${Date.now()}`
+              }
               alt="Logo"
               className="h-16 w-auto border rounded"
             />
@@ -227,7 +248,10 @@ export default function InvoiceSettings() {
               type="checkbox"
               checked={form.vehicleField}
               onChange={(e) =>
-                setForm((prev) => ({ ...prev, vehicleField: e.target.checked }))
+                setForm((prev) => ({
+                  ...prev,
+                  vehicleField: e.target.checked,
+                }))
               }
               className="accent-[#fabd05] scale-150 cursor-pointer"
             />
@@ -235,6 +259,7 @@ export default function InvoiceSettings() {
           </label>
         </div>
       </div>
+
       {/* Save Button */}
       <div className="text-right mt-8">
         <button

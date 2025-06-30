@@ -18,7 +18,7 @@ export default function Sidebar() {
     { path: "sell", label: "Sell", icon: <DollarSign size={20} /> },
     {
       path: "transactions",
-      label: "Transactions",
+      label: "Invoices & Transactions",
       icon: <FileText size={20} />,
     },
     {
