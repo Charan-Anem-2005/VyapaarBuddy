@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { toast } from "react-toastify";
-import API from "./Api";
+import { toast, ToastContainer } from "react-toastify";
 import {
   Building2,
   ImageIcon,
@@ -9,6 +8,8 @@ import {
   Save,
   Settings,
 } from "lucide-react";
+import "react-toastify/dist/ReactToastify.css";
+import API from "./Api";
 
 export default function InvoiceSettings() {
   const [form, setForm] = useState({
@@ -33,6 +34,7 @@ export default function InvoiceSettings() {
   });
 
   const [logoFile, setLogoFile] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadSettings() {
@@ -48,6 +50,8 @@ export default function InvoiceSettings() {
         }
       } catch {
         toast.error("Failed to load invoice settings.");
+      } finally {
+        setLoading(false);
       }
     }
     loadSettings();
@@ -64,18 +68,14 @@ export default function InvoiceSettings() {
 
   const handleSave = async () => {
     try {
-      console.log("Clicked save");
-
       let logoUrl = form.logoUrl;
 
       if (logoFile) {
         const data = new FormData();
         data.append("logo", logoFile);
         const res = await API.post("/logo/upload", data);
-        console.log("Upload res:", res.data);
         logoUrl = res.data.url;
 
-        // ✅ Update form with new logo to reflect instantly
         setForm((prev) => ({
           ...prev,
           logoUrl,
@@ -83,32 +83,36 @@ export default function InvoiceSettings() {
       }
 
       const payload = { ...form, logoUrl };
+      await API.post("/invoice-settings", payload);
 
-      const res = await API.post("/invoice-settings", payload);
-      console.log("Settings saved response:", res.data);
-
-      toast.dismiss();
       toast.success("Settings saved!", { autoClose: 3000 });
-
-      // ✅ Clear file input
       setLogoFile(null);
     } catch (err) {
-      console.error("Error in save:", err);
+      console.error("Error saving settings:", err);
       toast.error("Failed to save settings.");
     }
   };
 
   return (
-    <div className="max-w-5xl mx-auto p-8">
+    <div className="relative p-8 max-w-5xl mx-auto text-[#1E1E2D]">
+      <ToastContainer position="top-right" autoClose={3000} />
+
+      {/* Loader Overlay */}
+      {loading && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
+          <div className="w-10 h-10 border-4 border-gray-300 border-t-[#fabd05] rounded-full animate-spin" />
+        </div>
+      )}
+
       {/* Header */}
-      <div className="flex items-center gap-2 text-[#1E1E2D] font-semibold text-2xl pb-6">
+      <div className="flex items-center gap-2 font-semibold text-2xl pb-6">
         <Settings size={24} stroke="#fabd05" />
         <span>Invoice Settings</span>
       </div>
 
       {/* Company Details */}
-      <div className="bg-white rounded-lg p-6 shadow mb-6">
-        <div className="flex items-center gap-2 mb-4 text-[#1E1E2D] font-bold text-lg">
+      <div className="bg-white rounded-lg p-6 shadow mb-6 border-l-4 border-[#fabd05]">
+        <div className="flex items-center gap-2 mb-4 font-bold text-lg">
           <Building2 size={20} stroke="#fabd05" />
           Company Details
         </div>
@@ -116,50 +120,40 @@ export default function InvoiceSettings() {
           <input
             placeholder="Company Name"
             value={form.companyName}
-            onChange={(e) =>
-              setForm((prev) => ({ ...prev, companyName: e.target.value }))
-            }
+            onChange={(e) => setForm({ ...form, companyName: e.target.value })}
             className="border rounded p-2"
           />
           <input
             placeholder="Email"
             type="email"
             value={form.email}
-            onChange={(e) =>
-              setForm((prev) => ({ ...prev, email: e.target.value }))
-            }
+            onChange={(e) => setForm({ ...form, email: e.target.value })}
             className="border rounded p-2"
           />
           <input
             placeholder="Phone Number"
             value={form.phone}
-            onChange={(e) =>
-              setForm((prev) => ({ ...prev, phone: e.target.value }))
-            }
+            onChange={(e) => setForm({ ...form, phone: e.target.value })}
             className="border rounded p-2"
           />
           <input
             placeholder="GST Number"
             value={form.gstin}
-            onChange={(e) =>
-              setForm((prev) => ({ ...prev, gstin: e.target.value }))
-            }
+            onChange={(e) => setForm({ ...form, gstin: e.target.value })}
             className="border rounded p-2"
           />
           <textarea
             placeholder="Address"
             value={form.address}
-            onChange={(e) =>
-              setForm((prev) => ({ ...prev, address: e.target.value }))
-            }
+            onChange={(e) => setForm({ ...form, address: e.target.value })}
             className="border rounded p-2 col-span-2"
           />
         </div>
       </div>
 
       {/* Logo Upload */}
-      <div className="bg-white rounded-lg p-6 shadow mb-6">
-        <div className="flex items-center gap-2 mb-4 text-[#1E1E2D] font-bold text-lg">
+      <div className="bg-white rounded-lg p-6 shadow mb-6 border-l-4 border-[#fabd05]">
+        <div className="flex items-center gap-2 mb-4 font-bold text-lg">
           <ImageIcon size={20} stroke="#fabd05" />
           Company Logo
         </div>
@@ -186,8 +180,8 @@ export default function InvoiceSettings() {
       </div>
 
       {/* Brand Colors */}
-      <div className="bg-white rounded-lg p-6 shadow mb-6">
-        <div className="flex items-center gap-2 mb-4 text-[#1E1E2D] font-bold text-lg">
+      <div className="bg-white rounded-lg p-6 shadow mb-6 border-l-4 border-[#fabd05]">
+        <div className="flex items-center gap-2 mb-4 font-bold text-lg">
           <Palette size={20} stroke="#fabd05" />
           Brand Colors
         </div>
@@ -222,8 +216,8 @@ export default function InvoiceSettings() {
       </div>
 
       {/* Invoice Columns */}
-      <div className="bg-white rounded-lg p-6 shadow">
-        <div className="flex items-center gap-2 mb-4 text-[#1E1E2D] font-bold text-lg">
+      <div className="bg-white rounded-lg p-6 shadow border-l-4 border-[#fabd05]">
+        <div className="flex items-center gap-2 mb-4 font-bold text-lg">
           <TableProperties size={20} stroke="#fabd05" />
           Invoice Columns
         </div>
@@ -237,7 +231,7 @@ export default function InvoiceSettings() {
                   onChange={() => toggleField(key)}
                   className="accent-[#fabd05] scale-150 cursor-pointer"
                 />
-                <span className="capitalize text-[#1E1E2D]">{key}</span>
+                <span className="capitalize">{key}</span>
               </label>
             )
           )}
@@ -255,7 +249,7 @@ export default function InvoiceSettings() {
               }
               className="accent-[#fabd05] scale-150 cursor-pointer"
             />
-            <span className="text-[#1E1E2D]">Show Vehicle Number</span>
+            <span>Show Vehicle Number</span>
           </label>
         </div>
       </div>
