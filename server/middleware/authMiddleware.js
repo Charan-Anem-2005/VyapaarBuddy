@@ -33,6 +33,7 @@ const authMiddleware = async (req, res, next) => {
     next();
   } catch (err) {
     console.error("JWT error:", err.message);
+    
     return res.status(401).json({ error: "Unauthorized: Invalid or expired token" });
   }
 };
