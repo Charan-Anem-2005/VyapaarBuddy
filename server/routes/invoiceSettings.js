@@ -3,6 +3,7 @@ const router = express.Router();
 const InvoiceSetting = require('../models/InvoiceSettings');
 const authMiddleware = require('../middleware/authMiddleware');
 
+
 // GET invoice settings for logged-in user
 router.get('/', authMiddleware, async (req, res) => {
   try {
@@ -57,5 +58,7 @@ if (updated) {
     res.status(500).json({ error: 'Failed to save settings' });
   }
 });
+
+
 
 module.exports = router;

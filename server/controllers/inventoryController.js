@@ -128,4 +128,44 @@ const bulkTransaction = async (req, res, isSell = true) => {
 const sellMaterials = (req, res) => bulkTransaction(req, res, true);
 const buyMaterials = (req, res) => bulkTransaction(req, res, false);
 
-module.exports = { sellMaterials, buyMaterials };
+
+const updateRates = async (req, res) => {
+  const userId = req.user.id;
+  const newRate = parseFloat(req.body.newRate);
+
+  if (isNaN(newRate) || newRate <= 0) {
+    return res.status(400).json({ error: "Invalid rate" });
+  }
+
+  try {
+    const items = await Item.find({ userId });
+
+ 
+    let totalAmount = 0;
+
+    for (const item of items) {
+      if (item.PROFILE === "TOTAL") continue;
+
+      item.RATE = newRate;
+      item.AMOUNT = +(item.QTY * newRate);
+      totalAmount += item.AMOUNT;
+
+      await item.save();
+    }
+
+    // Update TOTAL row
+    const totalRow = await Item.findOne({ PROFILE: "TOTAL", userId });
+    if (totalRow) {
+      totalRow.RATE = newRate;
+      totalRow.AMOUNT = totalAmount;
+      await totalRow.save();
+    }
+
+    res.json({ message: "Rates and amounts updated successfully", newRate });
+  } catch (err) {
+    console.error("Error updating rates:", err);
+    res.status(500).json({ error: "Failed to update rates" });
+  }
+};
+
+module.exports = { sellMaterials, buyMaterials, updateRates };

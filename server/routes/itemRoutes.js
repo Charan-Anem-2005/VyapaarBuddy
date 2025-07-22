@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Item = require('../models/Item');
 const authMiddleware = require('../middleware/authMiddleware');
+const { updateRates } = require("../controllers/inventoryController");
 
 // 🔒 Apply authMiddleware to all routes
 router.use(authMiddleware);
@@ -77,5 +78,7 @@ router.delete('/:id', async (req, res) => {
     res.status(500).json({ error: 'Failed to delete item' });
   }
 });
+
+router.put("/update-rate", authMiddleware, updateRates);
 
 module.exports = router;

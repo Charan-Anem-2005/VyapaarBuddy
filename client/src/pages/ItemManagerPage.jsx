@@ -62,6 +62,22 @@ export default function ItemManagerPage() {
       setLoading(false);
     }
   };
+  const [newRate, setNewRate] = useState("");
+  const handleRateUpdate = async () => {
+    if (!newRate || isNaN(newRate)) {
+      toast.error("Please enter a valid rate");
+      return;
+    }
+
+    try {
+      const res = await API.put("/items/update-rate", { newRate });
+      toast.success(res.data.message || "Rate updated successfully");
+      fetchItems(); // Refresh list
+      setNewRate("");
+    } catch (err) {
+      toast.error("Error updating rates");
+    }
+  };
 
   const handleChange = (e) =>
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -212,6 +228,27 @@ export default function ItemManagerPage() {
           className="bg-[#fabd05] text-[#1E1E2D] px-4 py-2 rounded hover:bg-yellow-400 flex items-center gap-2"
         >
           <Download /> Export to Excel
+        </button>
+      </div>
+
+      {/* Update Rate Form */}
+      <div className="bg-white p-4 rounded shadow mb-6 flex flex-col sm:flex-row items-center gap-4">
+        <label className="font-medium text-[#1E1E2D]">
+          Set New Rate for All Items:
+        </label>
+        <input
+          type="number"
+          step="0.01"
+          value={newRate}
+          onChange={(e) => setNewRate(e.target.value)}
+          placeholder="Enter new rate (e.g. 116)"
+          className="border px-3 py-2 rounded w-48"
+        />
+        <button
+          onClick={handleRateUpdate}
+          className="bg-[#fabd05] text-[#1E1E2D] px-4 py-2 rounded hover:bg-yellow-400"
+        >
+          Update Rate
         </button>
       </div>
 
