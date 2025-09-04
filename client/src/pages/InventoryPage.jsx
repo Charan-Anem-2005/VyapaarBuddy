@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import TableView from "../components/TableView";
-import { FileUp, Trash2, Box } from "lucide-react";
+import { FileUp, Trash2, Box, Download } from "lucide-react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import API from "./Api";
@@ -74,12 +74,36 @@ const InventoryPage = () => {
   return (
     <div className="p-6 text-[#1E1E2D]">
       <ToastContainer position="top-right" autoClose={3000} />
+
+      {/* Notice Bar */}
+      <div className="mb-4 p-3 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 rounded">
+        📢 Please make sure your Excel matches the{" "}
+        <a
+          href="/sample_inventory.xlsx"
+          download
+          className="font-semibold underline hover:text-yellow-900"
+        >
+          sample Excel format
+        </a>{" "}
+        before importing.
+      </div>
+
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold flex items-center gap-2">
           <Box className="text-[#fabd05]" /> Inventory Management
         </h2>
         {!imported ? (
-          <>
+          <div className="flex gap-3">
+            {/* Download Sample Excel */}
+            <a
+              href="/sample_inventory.xlsx"
+              download
+              className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            >
+              <Download className="w-5 h-5" /> Download Sample
+            </a>
+
+            {/* Import Excel */}
             <button
               onClick={handleImportClick}
               className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
@@ -93,7 +117,7 @@ const InventoryPage = () => {
               onChange={handleFileChange}
               className="hidden"
             />
-          </>
+          </div>
         ) : (
           <button
             onClick={handleDelete}

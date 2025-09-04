@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import * as XLSX from "xlsx";
 import "react-toastify/dist/ReactToastify.css";
-import { Bar, Pie } from "react-chartjs-2";
+import { Pie } from "react-chartjs-2";
 import API from "./Api";
 
 // Chart.js setup
