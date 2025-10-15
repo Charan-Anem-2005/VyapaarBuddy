@@ -8,7 +8,7 @@ const authRoutes = require('./routes/authRoutes');
 const invoiceSettingsRoutes = require('./routes/invoiceSettings');
 const logoUploadRoutes = require('./routes/logoUpload');
 dotenv.config();
-const cors = require("cors");
+
 
 app.use(cors({
   origin: "https://vyapaarbuddy.onrender.com", // frontend URL
