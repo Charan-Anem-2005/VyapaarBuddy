@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Autosuggest from "react-autosuggest";
 import { MinusCircle, UserRoundCheck } from "lucide-react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -8,6 +9,7 @@ const SellPage = () => {
   const [items, setItems] = useState([
     { PROFILE: "", PACKS: "", LENGTHS: "", QTY: "", errors: {} },
   ]);
+  const [profiles, setProfiles] = useState([]);
   const [buyerInfo, setBuyerInfo] = useState({
     companyName: "",
     address: "",
@@ -19,6 +21,22 @@ const SellPage = () => {
   const [soldItems, setSoldItems] = useState([]);
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Fetch profiles from inventory
+  useEffect(() => {
+    const fetchProfiles = async () => {
+      try {
+        const res = await API.get("/inventory"); // adjust endpoint as needed
+        const uniqueProfiles = [
+          ...new Set(res.data.map((item) => item.PROFILE)),
+        ];
+        setProfiles(uniqueProfiles);
+      } catch (err) {
+        console.error("Error fetching profiles:", err);
+      }
+    };
+    fetchProfiles();
+  }, []);
 
   const addRow = () =>
     setItems([
@@ -54,10 +72,7 @@ const SellPage = () => {
   };
 
   const validateBuyerInfo = () => {
-    const requiredFields = {
-      companyName: "Buyer Name",
-    };
-
+    const requiredFields = { companyName: "Buyer Name" };
     let isValid = true;
 
     for (const key in requiredFields) {
@@ -136,6 +151,23 @@ const SellPage = () => {
     }
   };
 
+  // ===== AUTOSUGGEST HANDLERS =====
+  const getSuggestions = (value) => {
+    const inputValue = value.trim().toLowerCase();
+    const inputLength = inputValue.length;
+    return inputLength === 0
+      ? []
+      : profiles.filter((profile) =>
+          profile.toLowerCase().includes(inputValue)
+        );
+  };
+
+  const getSuggestionValue = (suggestion) => suggestion;
+
+  const renderSuggestion = (suggestion) => (
+    <div className="p-2 hover:bg-yellow-100 cursor-pointer">{suggestion}</div>
+  );
+
   return (
     <div className="p-6 text-[#1E1E2D]">
       <ToastContainer position="top-right" autoClose={3000} />
@@ -147,17 +179,12 @@ const SellPage = () => {
         <p>📌 Please ensure:</p>
         <ul className="list-disc pl-6">
           <li>
-            The <strong>PROFILE</strong> must exactly match one from your
-            inventory.
+            The <strong>PROFILE</strong> must match one from your inventory.
           </li>
           <li>
-            You can enter only <strong>one of PACKS, LENGTHS, or QTY</strong>{" "}
-            per item.
+            Only one of <strong>PACKS, LENGTHS, or QTY</strong> can be entered.
           </li>
-          <li>
-            Entered value must be a number. Clearing the value will re-enable
-            all fields.
-          </li>
+          <li>Entered value must be numeric.</li>
         </ul>
       </div>
 
@@ -198,7 +225,47 @@ const SellPage = () => {
             className="border border-gray-300 p-4 rounded shadow-sm bg-white"
           >
             <div className="flex flex-wrap gap-2 items-center">
-              {["PROFILE", "PACKS", "LENGTHS", "QTY"].map((field) => (
+              {/* Profile with Autosuggest */}
+              <div className="relative">
+                <Autosuggest
+                  suggestions={getSuggestions(item.PROFILE)}
+                  onSuggestionsFetchRequested={({ value }) => {
+                    const updated = [...items];
+                    updated[index].suggestions = getSuggestions(value);
+                    setItems(updated);
+                  }}
+                  onSuggestionsClearRequested={() => {
+                    const updated = [...items];
+                    updated[index].suggestions = [];
+                    setItems(updated);
+                  }}
+                  getSuggestionValue={getSuggestionValue}
+                  renderSuggestion={renderSuggestion}
+                  inputProps={{
+                    placeholder: "PROFILE",
+                    value: item.PROFILE,
+                    onChange: (_, { newValue }) => {
+                      const updated = [...items];
+                      updated[index].PROFILE = newValue;
+                      updated[index].errors.PROFILE = false;
+                      setItems(updated);
+                    },
+                    className: `border px-3 py-2 rounded w-40 ${
+                      item.errors?.PROFILE ? "border-red-500" : ""
+                    }`,
+                  }}
+                  theme={{
+                    container: "relative w-40",
+                    suggestionsContainer:
+                      "absolute z-10 bg-white border border-gray-200 rounded mt-1 w-full",
+                    suggestionsList: "list-none p-0 m-0",
+                    suggestionHighlighted: "bg-yellow-100",
+                  }}
+                />
+              </div>
+
+              {/* Other inputs */}
+              {["PACKS", "LENGTHS", "QTY"].map((field) => (
                 <input
                   key={field}
                   name={field}
@@ -208,9 +275,10 @@ const SellPage = () => {
                   className={`border px-3 py-2 rounded w-32 ${
                     item.errors?.[field] ? "border-red-500" : ""
                   }`}
-                  disabled={field !== "PROFILE" && isFieldDisabled(item, field)}
+                  disabled={isFieldDisabled(item, field)}
                 />
               ))}
+
               {items.length > 1 && (
                 <button
                   onClick={() => removeRow(index)}
@@ -241,7 +309,6 @@ const SellPage = () => {
         </button>
       </div>
 
-      {/* Totals */}
       {totalAmount > 0 && (
         <p className="font-semibold text-green-700 mt-4">
           Total Amount: ₹{totalAmount.toFixed(2)}

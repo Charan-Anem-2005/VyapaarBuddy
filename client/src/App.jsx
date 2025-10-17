@@ -4,6 +4,7 @@ import {
   Route,
   Outlet,
   useLocation,
+  Navigate,
 } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import HomePage from "./pages/HomePage";
@@ -21,8 +22,6 @@ import InvoiceSettings from "./pages/InvoiceSettings";
 function DashboardLayout() {
   return (
     <div className="flex h-[calc(100vh-110px)]">
-      {" "}
-      {/* assuming navbar is 64px tall */}
       <Sidebar />
       <main className="ml-64 w-full overflow-y-auto p-6 bg-gray-100">
         <Outlet />
@@ -33,6 +32,12 @@ function DashboardLayout() {
 
 function AppWrapper() {
   const location = useLocation();
+  const token = localStorage.getItem("token"); // replace with your JWT key
+
+  // If logged in, redirect from "/" or "/auth" to "/account"
+  if (token && (location.pathname === "/" || location.pathname === "/auth")) {
+    return <Navigate to="/account" replace />;
+  }
 
   const hideNavbarRoutes = ["/auth"];
   const hideNavbar = hideNavbarRoutes.includes(location.pathname);

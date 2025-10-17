@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Autosuggest from "react-autosuggest";
 import { PlusCircle, UserRoundCheck } from "lucide-react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -14,9 +15,27 @@ const BuyPage = () => {
     gstin: "",
     phone: "",
   });
+  const [profiles, setProfiles] = useState([]);
+  const [suggestions, setSuggestions] = useState([]);
   const [totalAmount, setTotalAmount] = useState(0);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch inventory profiles
+  useEffect(() => {
+    const fetchProfiles = async () => {
+      try {
+        const res = await API.get("/inventory");
+        const uniqueProfiles = [
+          ...new Set(res.data.map((item) => item.PROFILE)),
+        ].filter((p) => p && p.toLowerCase() !== "total");
+        setProfiles(uniqueProfiles);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchProfiles();
+  }, []);
 
   const handleChange = (index, e) => {
     const { name, value } = e.target;
@@ -34,28 +53,18 @@ const BuyPage = () => {
 
   const addRow = () =>
     setItems([...items, { PROFILE: "", PACKS: "", LENGTHS: "", QTY: "" }]);
-
-  const removeRow = (index) => {
-    const updated = items.filter((_, i) => i !== index);
-    setItems(updated);
-  };
-
+  const removeRow = (index) => setItems(items.filter((_, i) => i !== index));
   const isNumeric = (val) => /^(\d+(\.\d{1,2})?)?$/.test(val);
 
   const validateBuyerInfo = () => {
-    const requiredFields = {
-      companyName: "Vendor Company Name",
-    };
-
+    const requiredFields = { companyName: "Vendor Company Name" };
     let isValid = true;
-
     for (const key in requiredFields) {
       if (!buyerInfo[key]?.trim()) {
         toast.error(`${requiredFields[key]} is required`);
         isValid = false;
       }
     }
-
     return isValid;
   };
 
@@ -68,12 +77,14 @@ const BuyPage = () => {
         toast.error(`PROFILE is required`);
         return;
       }
-
+      if (!profiles.includes(PROFILE)) {
+        toast.error(`PROFILE "${PROFILE}" not found in inventory`);
+        return;
+      }
       if (filledFields.length === 0) {
         toast.error(`Enter either PACKS, LENGTHS, or QTY`);
         return;
       }
-
       const value = filledFields[0];
       if (!isNumeric(value)) {
         toast.error(`Only numbers allowed in PACKS/LENGTHS/QTY`);
@@ -82,14 +93,13 @@ const BuyPage = () => {
     }
 
     if (!validateBuyerInfo()) return;
-
     setShowConfirm(true);
   };
 
   const handleSubmit = async () => {
     setIsLoading(true);
     try {
-      const res = await API.post(`/buy`, { items, buyerInfo });
+      const res = await API.post("/buy", { items, buyerInfo });
       toast.success("Buy successful");
       setTotalAmount(res.data.totalAmount || 0);
       setItems([{ PROFILE: "", PACKS: "", LENGTHS: "", QTY: "" }]);
@@ -102,6 +112,28 @@ const BuyPage = () => {
     }
   };
 
+  // Autosuggest logic
+  const getSuggestions = (value) => {
+    const inputValue = value.trim().toLowerCase();
+    return inputValue.length === 0
+      ? []
+      : profiles.filter((p) => p.toLowerCase().includes(inputValue));
+  };
+
+  const onSuggestionsFetchRequested = ({ value }) =>
+    setSuggestions(getSuggestions(value));
+  const onSuggestionsClearRequested = () => setSuggestions([]);
+  const renderSuggestion = (suggestion) => (
+    <div className="px-3 py-2 hover:bg-yellow-100 cursor-pointer">
+      {suggestion}
+    </div>
+  );
+  const onSuggestionSelected = (event, { suggestionValue }, index) => {
+    const updated = [...items];
+    updated[index].PROFILE = suggestionValue;
+    setItems(updated);
+  };
+
   return (
     <div className="p-6 text-[#1E1E2D]">
       <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
@@ -112,16 +144,15 @@ const BuyPage = () => {
         <p>📌 Please ensure:</p>
         <ul className="list-disc pl-6">
           <li>
-            The <strong>PROFILE</strong> must exactly match one from your
-            inventory.
+            The <strong>PROFILE</strong> must match your inventory.
           </li>
           <li>
             You can enter only <strong>one of PACKS, LENGTHS, or QTY</strong>{" "}
             per item.
           </li>
           <li>
-            Entered value must be a number. Clearing the value will re-enable
-            all fields.
+            Entered value must be a number. Clearing it will re-enable all
+            fields.
           </li>
         </ul>
       </div>
@@ -155,19 +186,36 @@ const BuyPage = () => {
             (key) => item[key] !== ""
           );
 
+          const inputProps = {
+            placeholder: "PROFILE",
+            value: item.PROFILE,
+            onChange: (e, { newValue }) => {
+              const updated = [...items];
+              updated[index].PROFILE = newValue;
+              setItems(updated);
+            },
+            className: "border px-3 py-2 rounded w-40",
+          };
+
           return (
             <div
               key={index}
               className="border border-gray-300 p-4 rounded shadow-sm bg-white"
             >
-              <div className="flex flex-wrap gap-2">
-                <input
-                  name="PROFILE"
-                  placeholder="PROFILE"
-                  value={item.PROFILE}
-                  onChange={(e) => handleChange(index, e)}
-                  className="border px-3 py-2 rounded w-32"
-                />
+              <div className="flex flex-wrap gap-2 items-start">
+                <div className="relative w-40">
+                  <Autosuggest
+                    suggestions={suggestions}
+                    onSuggestionsFetchRequested={onSuggestionsFetchRequested}
+                    onSuggestionsClearRequested={onSuggestionsClearRequested}
+                    getSuggestionValue={(s) => s}
+                    renderSuggestion={renderSuggestion}
+                    onSuggestionSelected={(e, data) =>
+                      onSuggestionSelected(e, data, index)
+                    }
+                    inputProps={inputProps}
+                  />
+                </div>
                 {["PACKS", "LENGTHS", "QTY"].map((field) => (
                   <input
                     key={field}
@@ -209,7 +257,7 @@ const BuyPage = () => {
         </button>
       </div>
 
-      {/* Total Amount */}
+      {/* Total */}
       {totalAmount > 0 && (
         <p className="mt-4 font-semibold text-green-700">
           Total Amount: ₹{totalAmount.toFixed(2)}
