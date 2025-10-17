@@ -67,7 +67,7 @@ const HeroSection = () => {
           </div>
           <div className="flex flex-col items-center gap-1">
             <Headphones className="text-[#fabd05]" size={35} />
-            <p className="font-semibold text-2xl">35/7</p>
+            <p className="font-semibold text-2xl">24/7</p>
             <p className="text-gray-500 text-1xl">Support Available</p>
           </div>
         </div>

@@ -30,7 +30,7 @@ const generateInvoice = async (req, res) => {
     const stream = fs.createWriteStream(filePath);
     doc.pipe(stream);
 
-    // PDF Header
+    // === HEADER ===
     const pageWidth = doc.page.width;
     const startX = 50;
     const endX = pageWidth - 50;
@@ -69,7 +69,7 @@ const generateInvoice = async (req, res) => {
 
     y += 100;
 
-    // Table structure
+    // === TABLE ===
     const defaultCols = [
       { key: 'sno', header: 'S No', width: 30 },
       { key: 'description', header: 'Description', width: 90 },
@@ -91,13 +91,13 @@ const generateInvoice = async (req, res) => {
     const tableLeft = (pageWidth - visibleCols.reduce((a, b) => a + b.width, 0)) / 2;
     let yPos = y;
 
-    const drawRow = (row, y, isHeader = false, height = 20) => {
+    const drawRow = (row, y, isHeader = false, height = 20, fontSize = 7) => {
       let x = tableLeft;
       visibleCols.forEach((col, i) => {
         if (isHeader) doc.fillColor(settings.colorPrimary).rect(x, y, col.width, height).fill();
         doc.lineWidth(0.5).strokeColor('#000000').rect(x, y, col.width, height).stroke();
         doc.font(isHeader ? 'Helvetica-Bold' : 'Helvetica')
-          .fontSize(7)
+          .fontSize(fontSize)
           .fillColor(isHeader ? '#FFFFFF' : '#000000')
           .text(row[i], x + 5, y + 5, {
             width: col.width - 10,
@@ -151,21 +151,67 @@ const generateInvoice = async (req, res) => {
       yPos += 20;
     });
 
-    // Footer
-    const amountInWords = numberToWords(grandTotal);
-    yPos += 30;
-    doc.font('Helvetica').fontSize(10).text(`Amount in Words: ${amountInWords}`, startX, yPos);
-    yPos += 20;
+// === GRAND TOTAL ROW ===
+const totalRow = visibleCols.map(c => {
+  switch (c.key) {
+    case 'sno': return '';
+    case 'description': return 'GRAND TOTAL';
+    case 'HSN': return '';
+    case 'qty': return totalQty.toFixed(2);
+    case 'packets': return totalPacks.toFixed(2);
+    case 'lengths': return totalLengths.toFixed(2);
+    case 'rate': return '';
+    case 'amount': return subtotal.toFixed(2);
+    case 'CGST': return cgstTotal.toFixed(2);
+    case 'SGST': return sgstTotal.toFixed(2);
+    case 'total': return grandTotal.toFixed(2);
+    default: return '';
+  }
+});
 
-    doc.font('Helvetica-Bold').text('Declaration:', startX, yPos);
-    yPos += 15;
-    doc.font('Helvetica').text(
-      'We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.',
-      startX, yPos, { width: 500 }
-    );
-    yPos += 60;
-    doc.text(settings.companyName || '', 400, yPos);
-    doc.text('Authorized Signatory', 400, yPos + 30);
+// Light gray background for emphasis
+doc.fillColor('#F2F2F2')
+  .rect(tableLeft, yPos, visibleCols.reduce((a, b) => a + b.width, 0), 28)
+  .fill();
+
+// Draw bold text manually (bigger font)
+let x = tableLeft;
+visibleCols.forEach((col, i) => {
+  doc.lineWidth(0.5).strokeColor('#000000').rect(x, yPos, col.width, 28).stroke();
+  doc.font('Helvetica-Bold')
+    .fontSize(8)
+    .fillColor('#000000')
+    .text(totalRow[i], x + 5, yPos + 7, {
+      width: col.width - 10,
+      align: i === 1 ? 'left' : 'right',
+    });
+  x += col.width;
+});
+
+yPos += 38;
+
+// === AMOUNT IN WORDS ===
+const amountInWords = numberToWords(grandTotal).toUpperCase();
+
+doc.moveDown(0.5);
+doc.font('Helvetica-Bold')
+  .fontSize(11)
+  .fillColor('#000000')
+  .text(`Amount in Words: ${amountInWords}`, startX, yPos, { width: 500 });
+
+yPos += 30;
+
+// === DECLARATION ===
+doc.font('Helvetica-Bold').fontSize(10).text('Declaration:', startX, yPos);
+yPos += 15;
+doc.font('Helvetica').fontSize(9).text(
+  'We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.',
+  startX, yPos, { width: 500 }
+);
+yPos += 60;
+doc.text(settings.companyName || '', 400, yPos);
+doc.text('Authorized Signatory', 400, yPos + 30);
+
 
     doc.end();
 

@@ -26,12 +26,14 @@ const generateInvoice = async (req, res) => {
   const endX = pageWidth - 50;
   let y = 50;
 
+  // Header bar
   doc.rect(0, 0, pageWidth, 40).fill(settings.colorPrimary || '#007BFF');
   doc.fillColor('#FFFFFF').fontSize(16).font('Helvetica-Bold')
     .text('TAX INVOICE', startX, 13, { align: 'center', width: pageWidth - 100 })
     .fillColor('#000000');
   y += 45;
 
+  // Company Info + Logo
   if (settings.logoUrl && fs.existsSync(path.join(__dirname, '..', settings.logoUrl))) {
     doc.image(path.join(__dirname, '..', settings.logoUrl), startX, y, { width: 60 });
   }
@@ -43,6 +45,7 @@ const generateInvoice = async (req, res) => {
     .text('Ph: ' + (settings.phone || '') + ' | Email: ' + (settings.email || ''), startX + 70, y + 45);
   y += 75;
 
+  // Buyer + Invoice details box
   doc.rect(startX, y, endX - startX, 80).fill(settings.colorSecondary || '#E9F5FF');
   doc.fillColor('#000000').font('Helvetica-Bold').fontSize(11)
     .text(`Invoice No: ${invoiceNo}`, startX + 10, y + 10);
@@ -58,6 +61,7 @@ const generateInvoice = async (req, res) => {
 
   y += 100;
 
+  // Table headers
   const defaultCols = [
     { key: 'sno', header: 'S No', width: 30 },
     { key: 'description', header: 'Description', width: 90 },
@@ -72,7 +76,7 @@ const generateInvoice = async (req, res) => {
     { key: 'total', header: 'Total', width: 60 },
   ];
 
-  const visibleCols = defaultCols.filter(col => 
+  const visibleCols = defaultCols.filter(col =>
     ['sno', 'description', ...settings.visibleFields].includes(col.key)
   );
 
@@ -96,11 +100,13 @@ const generateInvoice = async (req, res) => {
     if (isHeader) doc.fillColor('#000000');
   };
 
+  // Draw header row
   drawRow(visibleCols.map(c => c.header), yPos, true);
   yPos += 20;
 
   let totalQty = 0, totalPacks = 0, totalLengths = 0, subtotal = 0, cgstTotal = 0, sgstTotal = 0, grandTotal = 0;
 
+  // Draw item rows
   items.forEach((item, idx) => {
     const qty = +parseFloat(item.soldQty || 0);
     const packets = +parseFloat(item.soldPacks || 0);
@@ -110,6 +116,7 @@ const generateInvoice = async (req, res) => {
     const cgst = +(amount * 0.09).toFixed(2);
     const sgst = +(amount * 0.09).toFixed(2);
     const total = +(amount + cgst + sgst).toFixed(2);
+
     totalQty += qty;
     totalPacks += packets;
     totalLengths += lengths;
@@ -139,8 +146,35 @@ const generateInvoice = async (req, res) => {
     yPos += 20;
   });
 
-  const amountInWords = numberToWords(grandTotal);
+  // === GRAND TOTAL ROW ===
+  const totalRow = visibleCols.map(c => {
+    switch (c.key) {
+      case 'sno': return '';
+      case 'description': return 'Grand Total';
+      case 'HSN': return '';
+      case 'qty': return totalQty.toFixed(2);
+      case 'packets': return totalPacks.toFixed(2);
+      case 'lengths': return totalLengths.toFixed(2);
+      case 'rate': return '';
+      case 'amount': return subtotal.toFixed(2);
+      case 'CGST': return cgstTotal.toFixed(2);
+      case 'SGST': return sgstTotal.toFixed(2);
+      case 'total': return grandTotal.toFixed(2);
+      default: return '';
+    }
+  });
+
+  // Highlighted total row
+  doc.fillColor(settings.colorSecondary || '#E9F5FF')
+     .rect(tableLeft, yPos, visibleCols.reduce((a, b) => a + b.width, 0), 20)
+     .fill();
+
+  doc.font('Helvetica-Bold').fillColor('#000000');
+  drawRow(totalRow, yPos, false, 20);
   yPos += 30;
+
+  // Amount in words + Declaration
+  const amountInWords = numberToWords(grandTotal);
   doc.font('Helvetica').fontSize(10).text(`Amount in Words: ${amountInWords}`, startX, yPos);
   yPos += 20;
 
@@ -150,6 +184,7 @@ const generateInvoice = async (req, res) => {
     'We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.',
     startX, yPos, { width: 500 }
   );
+
   yPos += 60;
   doc.text(settings.companyName || '', 400, yPos);
   doc.text('Authorized Signatory', 400, yPos + 30);

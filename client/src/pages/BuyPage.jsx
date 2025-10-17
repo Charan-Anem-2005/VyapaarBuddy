@@ -45,8 +45,6 @@ const BuyPage = () => {
   const validateBuyerInfo = () => {
     const requiredFields = {
       companyName: "Vendor Company Name",
-      address: "Vendor Address",
-      phone: "Phone Number",
     };
 
     let isValid = true;

@@ -56,8 +56,6 @@ const SellPage = () => {
   const validateBuyerInfo = () => {
     const requiredFields = {
       companyName: "Buyer Name",
-      address: "Address",
-      phone: "Phone Number",
     };
 
     let isValid = true;
