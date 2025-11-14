@@ -15,6 +15,10 @@ export default function HomePage() {
           name="description"
           content="Manage billing, GST invoices, inventory, and ledgers in one place with VyapaarBuddy."
         />
+        <meta
+          name="keywords"
+          content="business management software, billing website, GST invoicing, inventory management, VyapaarBuddy, accounting software, small business tools, Indian bussiness management, invoicing software,store management"
+        />
         <meta property="og:title" content="VyapaarBuddy" />
         <meta
           property="og:description"
