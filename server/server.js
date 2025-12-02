@@ -45,6 +45,21 @@ app.use('/api/invoice-settings', invoiceSettingsRoutes);
 app.use('/api/logo', logoUploadRoutes);
 app.use('/uploads', express.static('uploads')); // Serve logos
 
+const axios = require("axios");
+
+// Replace with your actual Render URL
+const SELF_URL = "https://vyapaarbuddy.onrender.com";
+
+setInterval(() => {
+  axios
+    .get(SELF_URL)
+    .then(() => {
+      console.log("Self ping successful");
+    })
+    .catch((err) => {
+      console.log("Self ping failed", err.message);
+    });
+}, 2 * 60 * 1000); // two minutes
 
 
 
@@ -66,3 +81,4 @@ const startServer = async () => {
 };
 
 startServer();
+
